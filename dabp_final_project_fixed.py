@@ -110,8 +110,8 @@ for i in hospitals:
 for j in schools:
     for i in hospitals: 
         ceiling = x[j,i]/12
-        m.addConstr(y[j,i] >= ceiling)
-        m.addConstr(y[j,i] <= ceiling + 0.999)
+        m.addConstr(y[j,i] <= ceiling)
+        m.addConstr(y[j,i] >= ceiling - 0.999)
 
 
 m.optimize()
