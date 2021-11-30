@@ -29,7 +29,7 @@ hospital_names = data.astype(np.str)
 #index = j
 #[0-28]
 path = "hospital_licensed_beds.csv"
-data = pd.read_excel("hospital_licensed_beds.xlsx")
+# data = pd.read_excel("hospital_licensed_beds.xlsx")
 hospital_licensed_beds = [552, 190, 30, 62, 162, 44, 315, 124, 176, 341, 
                           63, 49, 80, 200, 35, 32, 124, 30, 32, 328, 315, 
                           155, 383, 222, 495, 423, 1577, 520, 248, 263, 
@@ -162,23 +162,32 @@ for s in [0.01, 0.05, 0.10, 0.15, 0.19]:
     for j in range(num_schools):
         for i in range(num_hospitals):
             full_results[j][i] = x[j,i].X
-            
+
     file = open(str(s) + '_model1_results_store.csv', 'w+', newline='')
     with file:
         write = csv.writer(file)
         write.writerows(full_results)
-    
+
     full_results = [[0 for r in range(num_hospitals)] for u in range(num_schools)]
     for j in range(num_schools):
         for i in range(num_hospitals):
             full_results[j][i] = x2[j,i].X
-            
+
     file = open(str(s) + '_model2_results_store.csv', 'w+', newline='')
     with file:
         write = csv.writer(file)
         write.writerows(full_results)
- 
-        
-        
-        
-        
+
+#. Shows the number of miles traveled by all students from HS j to Hospital i
+    full_results = [[0 for r in range(num_hospitals)]
+                    for u in range(num_schools)]
+    for j in range(num_schools):
+        for i in range(num_hospitals):
+            full_results[j][i] = x[j, i].X * distance_store[j, i]
+
+    file = open(str(s) + 'test.csv', 'w+', newline='')
+    with file:
+        write = csv.writer(file)
+        write.writerows(full_results)
+
+
