@@ -45,16 +45,32 @@ school_names = data.astype(np.str)
 #number of students per high school 
 #index = j
 #[0-46]
-path = 'school_populations.csv'
+path = 'school_populations_01.csv'
 data = np.genfromtxt(path, dtype=str, delimiter=',', encoding='utf-8-sig')
-school_population = data.astype(np.int)
+school_population_01 = data.astype(np.int)
+
+path = 'school_populations_05.csv'
+data = np.genfromtxt(path, dtype=str, delimiter=',', encoding='utf-8-sig')
+school_population_05 = data.astype(np.int)
+
+path = 'school_populations_10.csv'
+data = np.genfromtxt(path, dtype=str, delimiter=',', encoding='utf-8-sig')
+school_population_10 = data.astype(np.int)
+
+path = 'school_populations_15.csv'
+data = np.genfromtxt(path, dtype=str, delimiter=',', encoding='utf-8-sig')
+school_population_15 = data.astype(np.int)
+
+path = 'school_populations_19.csv'
+data = np.genfromtxt(path, dtype=str, delimiter=',', encoding='utf-8-sig')
+school_population_19 = data.astype(np.int)
 
 #vary number of positive cases by simulation
 #index = s 
 #[0-999]
-path = 'positive_percents.csv'
-data = np.genfromtxt(path, dtype=str, delimiter=',', encoding='utf-8-sig')
-positive_percents = data.astype(np.float)
+# path = 'positive_percents.csv'
+# data = np.genfromtxt(path, dtype=str, delimiter=',', encoding='utf-8-sig')
+# positive_percents = data.astype(np.float)
 
 #distances from each school to each hospital 
 #29x47 matrix of distance from j -> i 
@@ -65,19 +81,19 @@ distance_store  = data.astype(np.float)
 #bus cost 
 bus_cost = 150 
 
-#number of kits available at hospitals 
-hospital_kits = [2857, 983, 155, 321, 838, 228, 1630, 642, 911, 1765, 326, 254, 
-                 414, 1035,181, 166, 642, 155, 166, 1697, 1630, 802, 1982, 
-                 1149, 2562, 2189, 8161, 2691, 1283, 1361, 2841, 1640]
+#number of kits available at schools 
+# school_kits = school_population
 
 #indices: 
 hospitals = range(len(hospital_names)) 
 num_hospitals = len(hospital_names)
 schools = range(len(school_names))
 num_schools = len(school_names)
-simulation = range(len(positive_percents))
+# simulation = range(len(positive_percents))
 
-for s in [0.01, 0.05, 0.10, 0.15, 0.19]:
+for s, p in zip([0.01, 0.05, 0.10, 0.15, 0.19]
+    , [school_population_01, school_population_05, school_population_10
+    , school_population_15, school_population_19]):
 #setting up model object 
     m = Model()
     m2 = Model()
@@ -102,29 +118,31 @@ for s in [0.01, 0.05, 0.10, 0.15, 0.19]:
     expr += max_distance
     m2.setObjective(expr)
     m2.modelSense = GRB.MINIMIZE
-    
+
     #constraints
-    
-    #every student must get assigned to a hospital  
+
+    #every infected student must get assigned to a hospital
     for j in schools:
         sum_sent = sum(x[j,i] for i in hospitals)
-        m.addConstr(sum_sent == school_population[j])
-    
-    #number of students recevied is less than kit capacity 
-    #number of infected students received is less than bed capacity 
-    for i in hospitals: 
-        sum_received = sum(x[j,i] for j in schools)
-        sum_received_positive = sum_received * s
-        m.addConstr(sum_received <= hospital_kits[i])
+        sum_busses = sum(y[j,i] for i in hospitals)
+        m.addConstr(sum_sent == p[j])
+        m.addConstr(sum_busses <= 150)
+
+    #number of students recevied is less than kit capacity
+    #number of infected students received is less than bed capacity
+    for i in hospitals:
+        sum_received_positive = sum(x[j, i] for j in schools)
+        # sum_received_positive = sum_received * s
+        # m.addConstr(sum_received <= school_kits[i])
         m.addConstr(sum_received_positive <= hospital_licensed_beds[i])
-   
+
     #number of buses required is ceil(12) of number of students sent 
     for j in schools:
-        for i in hospitals: 
-            ceiling = x[j,i]/12
+        for i in hospitals:
+            ceiling = x[j,i]/15
             m.addConstr(y[j,i] <= ceiling)
             m.addConstr(y[j,i] >= ceiling - 0.999)
-            
+
     #repeat for model 2 
     for j in schools:
         for i in hospitals:
@@ -133,15 +151,15 @@ for s in [0.01, 0.05, 0.10, 0.15, 0.19]:
     for j in schools:
         sum_sent = sum(x2[j,i] for i in hospitals)
         sum_busses = sum(y2[j,i] for i in hospitals)
-        m2.addConstr(sum_sent == school_population[j])
+        m2.addConstr(sum_sent == p[j])
         m2.addConstr(sum_busses <= 150)
     
     #number of students recevied is less than kit capacity 
     #number of infected students received is less than bed capacity 
     for i in hospitals: 
-        sum_received = sum(x2[j,i] for j in schools)
-        sum_received_positive = sum_received * s
-        m2.addConstr(sum_received <= hospital_kits[i])
+        sum_received_positive = sum(x2[j, i] for j in schools)
+        # sum_received_positive = sum_received
+        # m2.addConstr(sum_received <= school_kits[i])
         m2.addConstr(sum_received_positive <= hospital_licensed_beds[i])
     
     #number of buses required is ceil(12) of number of students sent 
@@ -185,7 +203,19 @@ for s in [0.01, 0.05, 0.10, 0.15, 0.19]:
         for i in range(num_hospitals):
             full_results[j][i] = x[j, i].X * distance_store[j, i]
 
-    file = open(str(s) + 'test.csv', 'w+', newline='')
+    file = open(str(s) + '_model1_total_mileage.csv', 'w+', newline='')
+    with file:
+        write = csv.writer(file)
+        write.writerows(full_results)
+
+#. Shows the number of miles traveled by all students from HS j to Hospital i
+    full_results = [[0 for r in range(num_hospitals)]
+                    for u in range(num_schools)]
+    for j in range(num_schools):
+        for i in range(num_hospitals):
+            full_results[j][i] = x2[j, i].X * distance_store[j, i]
+
+    file = open(str(s) + '_model2_total_mileage.csv', 'w+', newline='')
     with file:
         write = csv.writer(file)
         write.writerows(full_results)
